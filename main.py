@@ -1,7 +1,7 @@
 import tkinter as tk
-import keyboard
+from pynput import keyboard
 
-#CONSTANTS
+# CONST
 SCREEN_WIDTH = 400
 SCREEN_HEIGHT = 250
 key_width = 60
@@ -9,7 +9,6 @@ key_height = 60
 spacing = 10
 long_key = key_width * 3 + spacing * 2
 
-# KEY_LAYOUT
 keys = {
     'W': (spacing * 4 + key_width, spacing),
     'A': (spacing * 3, key_height + spacing * 2),
@@ -27,8 +26,8 @@ key_states = {key: False for key in keys}
 root = tk.Tk()
 root.title('Keyboard Overlay')
 root.geometry(f'{SCREEN_WIDTH}x{SCREEN_HEIGHT}')
-root.overrideredirect(True)  # NO BORDER/TITLE
-root.wm_attributes("-topmost", 1)  # ONTOP
+root.overrideredirect(True)  # No window border and title bar
+root.wm_attributes("-topmost", 1)  # Keep the window always on top
 
 canvas = tk.Canvas(root, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
 canvas.pack()
@@ -41,18 +40,43 @@ def draw_key(key, position, pressed, width=key_width):
     canvas.create_text(x + width // 2, y + key_height // 2, text=text, font=('Helvetica', '20'))
 
 def update_keys():
-    canvas.delete('all')  
+    canvas.delete('all')  # Clear the canvas
     for key, position in keys.items():
         draw_key(key, position, key_states[key], width=long_key if key in ['SPACE'] else key_width)
 
-def on_key_event(e):
-    key = e.name.upper()
-    if key == '0':  
-        root.destroy() 
-    if key in key_states:
-        key_states[key] = e.event_type == keyboard.KEY_DOWN
+def on_press(key):
+    try:
+        key_char = key.char.upper()
+    except AttributeError:
+        if key == keyboard.Key.space:
+            key_char = 'SPACE'
+        elif key == keyboard.Key.shift:
+            key_char = 'SHIFT'
+        else:
+            return
+    
+    if key_char == '0':  #  0 = END
+        root.destroy()  
+    elif key_char in key_states:
+        key_states[key_char] = True
         update_keys()
 
-keyboard.hook(on_key_event)
+def on_release(key):
+    try:
+        key_char = key.char.upper()
+    except AttributeError:
+        if key == keyboard.Key.space:
+            key_char = 'SPACE'
+        elif key == keyboard.Key.shift:
+            key_char = 'SHIFT'
+        else:
+            return
+
+    if key_char in key_states:
+        key_states[key_char] = False
+        update_keys()
+
+listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+listener.start()
 
 root.mainloop()
